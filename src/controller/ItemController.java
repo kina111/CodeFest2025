@@ -6,27 +6,26 @@ import jsclub.codefest.sdk.base.Node;
 import jsclub.codefest.sdk.model.Element;
 import jsclub.codefest.sdk.model.ElementType;
 import jsclub.codefest.sdk.model.GameMap;
-import jsclub.codefest.sdk.model.obstacles.ObstacleTag;
 import jsclub.codefest.sdk.model.players.Player;
 import jsclub.codefest.sdk.model.support_items.SupportItem;
 import jsclub.codefest.sdk.model.weapon.Weapon;
+import service.InventoryService;
 import util.ItemStatComparator;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ItemController {
 
     private final Hero hero;
-    private final InventoryController inventoryController;
+    private final InventoryService inventoryService;
 
     public ItemController(Hero hero) {
         this.hero = hero;
-        this.inventoryController = new InventoryController(hero.getInventory());
+        this.inventoryService = new InventoryService(hero.getInventory());
     }
 
-    public boolean handleSearchAroundItems(int radius) throws IOException {
+    public boolean handleSearchAroundItems(int radius, List<Node> nodesToAvoid) throws IOException {
         //tìm item
         Element item = searchBetterItemAround(radius);
         //nếu đổi đồ k có tác dụng gì
@@ -34,12 +33,13 @@ public class ItemController {
 
         //nếu đổi đồ có thể thêm điểm hoặc mạnh hơn
         GameMap gameMap = hero.getGameMap();
-        String pathToItem = PathUtils.getShortestPath(gameMap, getNodesToAvoid(gameMap), gameMap.getCurrentPlayer(), item, true);
+        String pathToItem = PathUtils.getShortestPath(gameMap, nodesToAvoid, gameMap.getCurrentPlayer(), item, true);
         if (pathToItem == null) return false;
 
-        Element currentElement = inventoryController.getElementByType(item.getType());
+        Element currentElement = inventoryService.getElementByType(item.getType());
         //nếu đang full đồ trong Inventory, sử dụng luôn hoặc vứt đi
         if (currentElement != null && !currentElement.getId().equals("HAND")){
+            System.out.println("🎒🎒 UsedItem: " + currentElement.getId());
             if (currentElement.getType() == ElementType.SUPPORT_ITEM){
                 SupportItem currentSupportItem = (SupportItem) currentElement;
                 hero.useItem(currentSupportItem.getId());
@@ -90,7 +90,7 @@ public class ItemController {
                 //get current element in Inventory by type: Weapon, Armor, SupportItem
                 ElementType type = foundItem.getType();
                 if (isPickable(type)) {
-                    Element currentItem = inventoryController.getElementByType(type);
+                    Element currentItem = inventoryService.getElementByType(type);
                     if (ItemStatComparator.isBetterItem(foundItem, currentItem)) {
                         return foundItem;
                     }
@@ -111,11 +111,42 @@ public class ItemController {
                 type == ElementType.SUPPORT_ITEM;
     }
 
-    private List<Node> getNodesToAvoid(GameMap gameMap) {
-        List<Node> nodes = new ArrayList<>(gameMap.getListIndestructibles());
-        nodes.removeAll(gameMap.getObstaclesByTag("CAN_GO_THROUGH"));
-        nodes.addAll(gameMap.getObstaclesByTag(String.valueOf(ObstacleTag.TRAP)));
-        nodes.addAll(gameMap.getOtherPlayerInfo());
-        return nodes;
+    public void handleSearchForGun(List<Node> nodesToAvoid) throws IOException {
+        System.out.println("No gun found. Searching for a gun.");
+        GameMap gameMap = hero.getGameMap();
+        String pathToGun = findPathToGun(nodesToAvoid);
+
+        if (pathToGun != null) {
+            if (pathToGun.isEmpty()) {
+                hero.pickupItem();
+            } else {
+                hero.move(pathToGun);
+            }
+        }
+    }
+
+    public String findPathToGun(List<Node> nodesToAvoid) {
+        GameMap gameMap = hero.getGameMap();
+        Player player = gameMap.getCurrentPlayer();
+        Weapon nearestGun = getNearestGun();
+        if (nearestGun == null) return null;
+        return PathUtils.getShortestPath(gameMap, nodesToAvoid, player, nearestGun, true);
+    }
+
+    public Weapon getNearestGun() {
+        GameMap gameMap = hero.getGameMap();
+        Player player = gameMap.getCurrentPlayer();
+        List<Weapon> guns = gameMap.getAllGun();
+        Weapon nearestGun = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (Weapon gun : guns) {
+            double distance = PathUtils.distance(player, gun);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestGun = gun;
+            }
+        }
+        return nearestGun;
     }
 }

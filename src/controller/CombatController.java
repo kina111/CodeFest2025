@@ -6,99 +6,103 @@ import jsclub.codefest.sdk.base.Node;
 import jsclub.codefest.sdk.model.ElementType;
 import jsclub.codefest.sdk.model.GameMap;
 import jsclub.codefest.sdk.model.Inventory;
-import jsclub.codefest.sdk.model.obstacles.ObstacleTag;
 import jsclub.codefest.sdk.model.players.Player;
 import jsclub.codefest.sdk.model.weapon.Weapon;
+import service.InventoryService;
+import service.WeaponService;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class CombatController {
 
     private final Hero hero;
     private final Inventory inventory;
+    private final WeaponService weaponService = WeaponService.getInstance();
 
     public CombatController(Hero hero) {
         this.hero = hero;
         this.inventory = hero.getInventory();
-        InventoryController inventoryController = new InventoryController(hero.getInventory());
+        new InventoryService(hero.getInventory());
     }
 
-    public boolean engageNearestEnemy() throws IOException {
+    public void engageNearestEnemy(List<Node> nodesToAvoid) throws IOException {
         GameMap gameMap = hero.getGameMap();
         Player me = gameMap.getCurrentPlayer();
+        long currentStep = gameMap.getStepNumber();
 
-        Player target = getNearestPlayer(gameMap);
-        if (target == null) {
-            System.out.println("🎒 No enemies found.");
-            return false;
-        }
+        Player target = getNearestPlayer();
+        if (target.getHealth() <= 0) return;
 
-        Weapon best = getBestWeaponCanUse(me, target);
+        Weapon best = getBestWeaponCanUse(me, target, currentStep);
 
         if (best != null) {
-            System.out.println("🎒 Best weapon is: " + best.getId());
-            useWeapon(best, getDirection(best, me, target));
-            return true;
+            System.out.println("✅ Using weapon: " + best.getId());
+            String direction = getDirection(best, me, target);
+            useWeapon(best, direction);
+            weaponService.markUsed(best.getId(), currentStep);
         } else {
-            System.out.println("🎒 Moving toward enemy.");
-            moveTowards(target);
+            System.out.println("➡️ Moving toward enemy.");
+            moveTowards(target, nodesToAvoid);
         }
 
-        return false;
     }
 
-    //tìm best weapon có thể sử dụng được, trả về null nếu không có
-    public Weapon getBestWeaponCanUse(Player player, Player target) {
-        Weapon best = null;
-        //ưu tiên Melee nếu trong tầm ngắn
-        if (canUse(inventory.getGun(), player, target)) best = inventory.getGun();
-        else if (canUse(inventory.getThrowable(),player, target)) best =  inventory.getThrowable();
-        else if (canUse(inventory.getSpecial(), player, target)) best =  inventory.getSpecial();
-        else if (isArmed() && canUse(inventory.getMelee(), player, target)) best = inventory.getMelee();
+    public Weapon getBestWeaponCanUse(Player player, Player target, long currentStep) {
+        //special case: nếu có thể kết liễu bằng melee, tránh tốn đạn
+        Weapon melee = inventory.getMelee();
+        if (canUse(melee, player, target) && weaponService.canUse(melee, currentStep) && target.getHealth() <= melee.getDamage()){
+            return melee;
+        }
 
-        if (best != null) System.out.println("🎒 Choosing: " + best.getId().toUpperCase() + " to fight!!");
-        return best;
+
+        Weapon[] priority = {
+                inventory.getGun(),
+                inventory.getThrowable(),
+                inventory.getSpecial(),
+                inventory.getMelee()
+        };
+
+        for (Weapon weapon : priority) {
+            if (weapon == null) continue;
+            boolean usable = canUse(weapon, player, target) &&
+                    weaponService.canUse(weapon, currentStep);
+
+            if (usable) {
+                System.out.println("🎯 Weapon chosen: " + weapon.getId());
+                return weapon;
+            }
+        }
+
+        return null;
     }
 
     private void useWeapon(Weapon weapon, String direction) throws IOException {
         ElementType type = weapon.getType();
-        if (type == ElementType.GUN) {
-            hero.shoot(direction);
-        } else if (type == ElementType.THROWABLE) {
-            hero.throwItem(direction);
-        } else if (type == ElementType.SPECIAL) {
-            hero.useSpecial(direction);
-        } else {
-            hero.attack(direction);
+        switch (type) {
+            case GUN -> hero.shoot(direction);
+            case THROWABLE -> hero.throwItem(direction);
+            case SPECIAL -> hero.useSpecial(direction);
+            default -> hero.attack(direction);
         }
     }
 
-    //check if can use Weapon
     private boolean canUse(Weapon weapon, Player player, Player target) {
         if (weapon == null) return false;
-        int difInX = player.getX() - target.getX();
-        int difInY = player.getY() - target.getY();
 
-        int dx = Math.abs(difInX), dy = Math.abs(difInY);
+        int dx = Math.abs(player.getX() - target.getX());
+        int dy = Math.abs(player.getY() - target.getY());
+
         return switch (weapon.getId()) {
-            //case [1,1]
-            case "HAND" -> (dx == 0 && dy == 1) || (dx == 1 && dy == 0);
-            //case[3,1]
+            case "HAND" -> (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
             case "KNIFE", "TREE_BRANCH", "AXE" -> dx <= 1 && dy <= 1;
-            //case [3,3]
             case "MACE" -> dx <= 2 && dy <= 2;
-            //case [7,7]
             case "BELL" -> dx <= 6 && dy <= 6;
-            //case throwable
             case "BANANA", "METEORITE_FRAGMENT", "CRYSTAL", "SEED", "SMOKE" ->
-                    (dx <= 1 && dy <= weapon.getRange()[1]+1 && dy >= weapon.getRange()[1]-1) ||
-                            (dy <= 1 && dx <= weapon.getRange()[1]+1 && dx >= weapon.getRange()[1]-1);
-            //normal cases
+                    (dx <= 1 && Math.abs(dy - weapon.getRange()[1]) <= 1)
+                            || (dy <= 1 && Math.abs(dx - weapon.getRange()[1]) <= 1);
             default -> (dx == 0 && dy <= weapon.getRange()[1]) || (dy == 0 && dx <= weapon.getRange()[1]);
         };
-
     }
 
     private String getDirection(Weapon weapon, Player player, Player target) {
@@ -125,31 +129,21 @@ public class CombatController {
                 if (dx <= 1 && difInY > 0) return "d";
             }
         }
-
-//        if (difInX < 0){
-//            direction = (difInY < 0) ? "u" : "d";
-//        }else if (difInX == 0){
-//            direction = (difInY < 0) ? "u" : "d";
-//        }
-//        else{
-//            direction = (difInY < 0) ? "u" : "d";
-//        }
         return direction;
     }
 
-    private void moveTowards(Player target) throws IOException {
+    private void moveTowards(Player target,  List<Node> nodesToAvoid) throws IOException {
         GameMap gameMap = hero.getGameMap();
         Player me = gameMap.getCurrentPlayer();
-
         Node from = new Node(me.getX(), me.getY());
         Node to = new Node(target.getX(), target.getY());
 
-        String path = PathUtils.getShortestPath(gameMap, getNodesToAvoid(gameMap), from, to, true);
+        String path = PathUtils.getShortestPath(gameMap, nodesToAvoid, from, to, true);
         if (!path.isEmpty()) {
             hero.move(path.substring(0, 1));
         }
     }
-    //check has weapon already
+
     public boolean isArmed() {
         return inventory.getGun() != null
                 || inventory.getThrowable() != null
@@ -157,7 +151,8 @@ public class CombatController {
                 || (inventory.getMelee() != null && !"HAND".equals(inventory.getMelee().getId()));
     }
 
-    public Player getNearestPlayer(GameMap gameMap) {
+    public Player getNearestPlayer() {
+        GameMap gameMap = hero.getGameMap();
         Player me = gameMap.getCurrentPlayer();
         List<Player> others = gameMap.getOtherPlayerInfo();
 
@@ -175,11 +170,4 @@ public class CombatController {
         return nearest;
     }
 
-    private List<Node> getNodesToAvoid(GameMap gameMap) {
-        List<Node> nodes = new ArrayList<>(gameMap.getListIndestructibles());
-        nodes.removeAll(gameMap.getObstaclesByTag("CAN_GO_THROUGH"));
-        nodes.addAll(gameMap.getObstaclesByTag(String.valueOf(ObstacleTag.TRAP)));
-        nodes.addAll(gameMap.getOtherPlayerInfo());
-        return nodes;
-    }
 }

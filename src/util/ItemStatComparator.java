@@ -30,10 +30,10 @@ public class ItemStatComparator {
         compareSpecial = new HashMap<>();
         compareSupportItem = new HashMap<>();
         compareArmor = new HashMap<>();
-        compareMelee.put("MACE", 1); compareMelee.put("KNIFE", 2); compareMelee.put("TREE_BRANCH", 2); compareMelee.put("AXE", 2); compareMelee.put("BONE", 3); compareMelee.put("HAND", 4);
+        compareMelee.put("MACE", 1); compareMelee.put("AXE", 1); compareMelee.put("KNIFE", 2); compareMelee.put("TREE_BRANCH", 2); compareMelee.put("BONE", 3); compareMelee.put("HAND", 4);
         compareGun.put("SHOTGUN", 1); compareGun.put("CROSSBOW", 2); compareGun.put("SCEPTER", 2); compareGun.put("RUBBER_GUN", 3);
-        compareThrowable.put("CRYSTAL", 1); compareThrowable.put("METEORITE_FRAGMENT", 2); compareThrowable.put("BANANA", 2); compareThrowable.put("SEED", 3); compareThrowable.put("SMOKE", 4);
-        compareSpecial.put("BELL", 1); compareSpecial.put("SAHUR_BAT", 2); compareSpecial.put("ROPE", 2);
+        compareThrowable.put("CRYSTAL", 1); compareThrowable.put("BANANA", 2); compareThrowable.put("SEED", 3); compareThrowable.put("METEORITE_FRAGMENT", 3); compareThrowable.put("SMOKE", 4);
+        compareSpecial.put("BELL", 1); compareSpecial.put("ROPE", 2); compareSpecial.put("SAHUR_BAT", 3);
         compareSupportItem.put("ELIXIR_OF_LIFE", 1); compareSupportItem.put("COMPASS", 2); compareSupportItem.put("MAGIC", 3); compareSupportItem.put("UNICORN_BLOOD", 3); compareSupportItem.put("PHOENIX_FEATHERS", 4); compareSupportItem.put("MERMAID_TAIL", 5); compareSupportItem.put("SPIRIT_TEAR", 6); compareSupportItem.put("GOD_LEAF", 7); compareSupportItem.put("ELIXIR", 8);
         compareArmor.put("MAGIC_ARMOR", 1); compareArmor.put("MAGIC_HELMET", 2); compareArmor.put("ARMOR", 3); compareArmor.put("WOODEN_HELMET", 4);
     }

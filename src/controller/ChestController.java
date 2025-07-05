@@ -7,9 +7,7 @@ import jsclub.codefest.sdk.model.GameMap;
 import jsclub.codefest.sdk.model.obstacles.Obstacle;
 import jsclub.codefest.sdk.model.obstacles.ObstacleTag;
 import jsclub.codefest.sdk.model.players.Player;
-
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ChestController {

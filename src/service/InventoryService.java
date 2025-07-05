@@ -1,4 +1,4 @@
-package controller;
+package service;
 
 import jsclub.codefest.sdk.model.Element;
 import jsclub.codefest.sdk.model.ElementType;
@@ -7,11 +7,11 @@ import jsclub.codefest.sdk.model.support_items.SupportItem;
 import util.ItemStatComparator;
 import java.util.List;
 
-public class InventoryController {
+public class InventoryService {
     private final Inventory inventory;
     private final static int MAX_SupportItem = 4;
 
-    public InventoryController(Inventory inventory) {
+    public InventoryService(Inventory inventory) {
         this.inventory = inventory;
     }
 
@@ -31,9 +31,7 @@ public class InventoryController {
     public SupportItem getWorstSupportItem(){
         List<SupportItem> supportItems = inventory.getListSupportItem();
         if (supportItems.size() < MAX_SupportItem) return null;
-        for (SupportItem si : supportItems){
-            System.out.println("!!! Having " + si.getId());
-        }
+
         SupportItem worst = supportItems.get(0);
 
         for (SupportItem supportItem : supportItems) {
