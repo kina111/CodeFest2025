@@ -3,8 +3,7 @@ package util;
 import jsclub.codefest.sdk.model.Element;
 import jsclub.codefest.sdk.model.ElementType;
 import jsclub.codefest.sdk.model.armors.Armor;
-import jsclub.codefest.sdk.model.effects.Effect;
-import jsclub.codefest.sdk.model.healing_items.HealingItem;
+import jsclub.codefest.sdk.model.support_items.SupportItem;
 import jsclub.codefest.sdk.model.weapon.Weapon;
 
 import java.util.HashMap;
@@ -19,7 +18,7 @@ public class ItemStatComparator {
     private static final Map<String, Integer> compareThrowable;
     private static final Map<String, Integer> compareSpecial;
     //COMPARE HEALING-ITEM
-    private static final Map<String, Integer> compareHealingItem;
+    private static final Map<String, Integer> compareSupportItem;
     //COMPARE ARMOR
     private static final Map<String, Integer> compareArmor;
 
@@ -29,13 +28,13 @@ public class ItemStatComparator {
         compareGun = new HashMap<>();
         compareThrowable = new HashMap<>();
         compareSpecial = new HashMap<>();
-        compareHealingItem = new HashMap<>();
+        compareSupportItem = new HashMap<>();
         compareArmor = new HashMap<>();
         compareMelee.put("MACE", 1); compareMelee.put("KNIFE", 2); compareMelee.put("TREE_BRANCH", 2); compareMelee.put("AXE", 2); compareMelee.put("BONE", 3); compareMelee.put("HAND", 4);
         compareGun.put("SHOTGUN", 1); compareGun.put("CROSSBOW", 2); compareGun.put("SCEPTER", 2); compareGun.put("RUBBER_GUN", 3);
         compareThrowable.put("CRYSTAL", 1); compareThrowable.put("METEORITE_FRAGMENT", 2); compareThrowable.put("BANANA", 2); compareThrowable.put("SEED", 3); compareThrowable.put("SMOKE", 4);
         compareSpecial.put("BELL", 1); compareSpecial.put("SAHUR_BAT", 2); compareSpecial.put("ROPE", 2);
-        compareHealingItem.put("ELIXIR_OF_LIFE", 1); compareHealingItem.put("COMPASS", 2); compareHealingItem.put("MAGIC", 3); compareHealingItem.put("UNICORN_BLOOD", 3); compareHealingItem.put("PHOENIX_FEATHERS", 4); compareHealingItem.put("MERMAID_TAIL", 5); compareHealingItem.put("SPIRIT_TEAR", 6); compareHealingItem.put("GOD_LEAF", 7); compareHealingItem.put("ELIXIR", 8);
+        compareSupportItem.put("ELIXIR_OF_LIFE", 1); compareSupportItem.put("COMPASS", 2); compareSupportItem.put("MAGIC", 3); compareSupportItem.put("UNICORN_BLOOD", 3); compareSupportItem.put("PHOENIX_FEATHERS", 4); compareSupportItem.put("MERMAID_TAIL", 5); compareSupportItem.put("SPIRIT_TEAR", 6); compareSupportItem.put("GOD_LEAF", 7); compareSupportItem.put("ELIXIR", 8);
         compareArmor.put("MAGIC_ARMOR", 1); compareArmor.put("MAGIC_HELMET", 2); compareArmor.put("ARMOR", 3); compareArmor.put("WOODEN_HELMET", 4);
     }
     // ====== VŨ KHÍ ======
@@ -83,10 +82,10 @@ public class ItemStatComparator {
     }
 
     // ====== HỒI MÁU ======
-    public static boolean isBetterHealingItem(HealingItem newItem, HealingItem oldItem) {
+    public static boolean isBetterSupportItem(SupportItem newItem, SupportItem oldItem) {
         if (newItem == null) return false;
         if (oldItem == null) return true;
-        return compareHealingItem.get(newItem.getId()) < compareHealingItem.get(oldItem.getId());
+        return compareSupportItem.get(newItem.getId()) < compareSupportItem.get(oldItem.getId());
     }
 
     // ====== GỘP TẤT CẢ ======
@@ -113,11 +112,11 @@ public class ItemStatComparator {
 
                     return isBetterArmor((Armor) newItem, (Armor) currentItem);
 
-                case HEALING_ITEM:
-                    System.out.println("🎒 Comparing HealingItem: " + newItem.getId() + "\n" + currentItem.getId());
-                    System.out.println("🎒 Is Better HealingItem: " +  isBetterHealingItem((HealingItem) newItem, (HealingItem) currentItem));
+                case SUPPORT_ITEM:
+                    System.out.println("🎒 Comparing SupportItem: " + newItem.getId() + "\n" + currentItem.getId());
+                    System.out.println("🎒 Is Better SupportItem: " +  isBetterSupportItem((SupportItem) newItem, (SupportItem) currentItem));
 
-                    return isBetterHealingItem((HealingItem) newItem, (HealingItem) currentItem);
+                    return isBetterSupportItem((SupportItem) newItem, (SupportItem) currentItem);
 
                 default:
                     return false;

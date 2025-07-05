@@ -6,8 +6,9 @@ import jsclub.codefest.sdk.base.Node;
 import jsclub.codefest.sdk.model.Element;
 import jsclub.codefest.sdk.model.ElementType;
 import jsclub.codefest.sdk.model.GameMap;
-import jsclub.codefest.sdk.model.healing_items.HealingItem;
+import jsclub.codefest.sdk.model.obstacles.ObstacleTag;
 import jsclub.codefest.sdk.model.players.Player;
+import jsclub.codefest.sdk.model.support_items.SupportItem;
 import jsclub.codefest.sdk.model.weapon.Weapon;
 import util.ItemStatComparator;
 
@@ -39,10 +40,10 @@ public class ItemController {
         Element currentElement = inventoryController.getElementByType(item.getType());
         //nếu đang full đồ trong Inventory, sử dụng luôn hoặc vứt đi
         if (currentElement != null && !currentElement.getId().equals("HAND")){
-            if (currentElement.getType() == ElementType.HEALING_ITEM){
-                HealingItem currentSpecial = (HealingItem) currentElement;
-                hero.useItem(currentElement.getId());
-                System.out.println("🎒 Using HealingItem: " + currentElement.getId() + "and get " + currentSpecial.getPoint() + "points!!");
+            if (currentElement.getType() == ElementType.SUPPORT_ITEM){
+                SupportItem currentSupportItem = (SupportItem) currentElement;
+                hero.useItem(currentSupportItem.getId());
+                System.out.println("🎒 Using SupportItem: " + currentElement.getId() + "and get " + currentSupportItem.getPoint() + "points!!");
             }
             else if (currentElement.getType() == ElementType.SPECIAL) {
                 Weapon currentSpecial = (Weapon) currentElement;
@@ -51,7 +52,7 @@ public class ItemController {
             }
             else if (currentElement.getType() == ElementType.THROWABLE){
                 Weapon currentWeapon = (Weapon) currentElement;
-                hero.throwItem("l", currentWeapon.getRange());
+                hero.throwItem("l");
                 System.out.println("🎒 Using ThrowableItem: " + currentElement.getId());
             }
             else {
@@ -86,7 +87,7 @@ public class ItemController {
                 Element foundItem = gameMap.getElementByIndex(nx, ny);
                 if (foundItem == null) continue;
 
-                //get current element in Inventory by type: Weapon, Armor, HealingItem
+                //get current element in Inventory by type: Weapon, Armor, SupportItem
                 ElementType type = foundItem.getType();
                 if (isPickable(type)) {
                     Element currentItem = inventoryController.getElementByType(type);
@@ -107,13 +108,13 @@ public class ItemController {
                 type == ElementType.SPECIAL ||
                 type == ElementType.ARMOR ||
                 type == ElementType.HELMET ||
-                type == ElementType.HEALING_ITEM;
+                type == ElementType.SUPPORT_ITEM;
     }
 
     private List<Node> getNodesToAvoid(GameMap gameMap) {
         List<Node> nodes = new ArrayList<>(gameMap.getListIndestructibles());
         nodes.removeAll(gameMap.getObstaclesByTag("CAN_GO_THROUGH"));
-        nodes.addAll(gameMap.getListTraps());
+        nodes.addAll(gameMap.getObstaclesByTag(String.valueOf(ObstacleTag.TRAP)));
         nodes.addAll(gameMap.getOtherPlayerInfo());
         return nodes;
     }

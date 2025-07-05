@@ -5,6 +5,7 @@ import jsclub.codefest.sdk.algorithm.PathUtils;
 import jsclub.codefest.sdk.base.Node;
 import jsclub.codefest.sdk.model.GameMap;
 import jsclub.codefest.sdk.model.obstacles.Obstacle;
+import jsclub.codefest.sdk.model.obstacles.ObstacleTag;
 import jsclub.codefest.sdk.model.players.Player;
 
 import java.io.IOException;
@@ -52,7 +53,7 @@ public class ChestController {
         GameMap gameMap = hero.getGameMap();
         Player player = hero.getGameMap().getCurrentPlayer();
 
-        List<Obstacle> chests = gameMap.getListChests();
+        List<Obstacle> chests = gameMap.getObstaclesByTag(String.valueOf(ObstacleTag.DESTRUCTIBLE));
         Obstacle nearestChest = null;
         double minDistance = Double.MAX_VALUE;
 
