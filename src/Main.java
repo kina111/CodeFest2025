@@ -1,7 +1,6 @@
 import controller.ChestController;
 import controller.CombatController;
 import jsclub.codefest.sdk.model.weapon.Weapon;
-import jsclub.codefest.sdk.socket.data.receive_data.Item;
 import service.InventoryService;
 import controller.ItemController;
 import io.socket.emitter.Emitter;
@@ -13,16 +12,17 @@ import jsclub.codefest.sdk.model.obstacles.Obstacle;
 import jsclub.codefest.sdk.model.obstacles.ObstacleTag;
 import jsclub.codefest.sdk.model.players.Player;
 import jsclub.codefest.sdk.model.support_items.SupportItem;
+
+import javax.swing.undo.CannotUndoException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
     private static final String SERVER_URL = "https://cf25-server.jsclub.dev";
-    private static final String GAME_ID = "164789";
+    private static final String GAME_ID = "134321";
     private static final String PLAYER_NAME = "Nam";
-    private static final String SECRET_KEY = "sk-rAiD_741RwOf-mMiP--IXw:7IC491OHP-m2TIA_9L3YLsyKQ-NTfXn2AFFI80rN4VnPtAicns1GXUxcXhR9QtZO9AX3zJcms7ifir_aGOkXVA";
-
+    private static final String SECRET_KEY = "sk-6j1RRtyJQxKpQN9356Pi1Q:eFMlgV6eZ-JtfHA9fJhHpFOvsD_Mr5Qu4sf1XxvuoscDlrWMRWoH_BxDumyAnN8rjKf1JeFQxWyX0OO3BB5UYA";
 
     public static void main(String[] args) throws IOException {
         Hero hero = new Hero(GAME_ID, PLAYER_NAME, SECRET_KEY);
@@ -36,8 +36,8 @@ public class Main {
 class MapUpdateListener implements Emitter.Listener {
     private final Hero hero;
     private final ChestController chestController;
-    private  final CombatController combatController;
-    private  final ItemController itemController;
+    private final CombatController combatController;
+    private final ItemController itemController;
 
     public MapUpdateListener(Hero hero) {
         this.hero = hero;
@@ -50,7 +50,8 @@ class MapUpdateListener implements Emitter.Listener {
     @Override
     public void call(Object... args) {
         try {
-            if (args == null || args.length == 0) return;
+            if (args == null || args.length == 0)
+                return;
 
             GameMap gameMap = hero.getGameMap();
             gameMap.updateOnUpdateMap(args[0]);
@@ -60,52 +61,53 @@ class MapUpdateListener implements Emitter.Listener {
                 System.out.println("Player is dead or data is not available.");
                 return;
             }
+
             List<Node> nodesToAvoid = getNodesToAvoid();
             Obstacle nearestChest = chestController.getNearestChest();
             Player nearestPlayer = combatController.getNearestPlayer();
             Weapon nearestGun = itemController.getNearestGun();
+            int safeZone = gameMap.getSafeZone(), mapSize = gameMap.getMapSize();
 
-
-            //nếu đang ngoài Bo
-            if (!PathUtils.checkInsideSafeArea(player, gameMap.getSafeZone(), gameMap.getMapSize())){
+            // nếu đang ngoài Bo
+            if (!PathUtils.checkInsideSafeArea(player, safeZone, mapSize)) {
                 System.out.println("Ngoài BO!!!");
-                moveToSafeZone();
+                moveToSafeZone(nodesToAvoid);
             }
-            //hồi máu nếu dưới MIN
+            // hồi máu nếu dưới MIN
             handleRecover(player, 70);
 
             // 1. Nếu có item gần, ưu tiên nhặt trước
-            if (itemController.handleSearchAroundItems(2, nodesToAvoid)) return;
+            if (itemController.handleSearchAroundItems(1, nodesToAvoid))
+                return;
 
             // 2. Nếu không có vũ khí nào mạnh, nên ưu tiên trước
             if (!combatController.isArmed()) {
-                if (nearestGun != null){
+                if (nearestGun != null) {
                     itemController.handleSearchForGun(nodesToAvoid);
                     return;
-                }else{
+                } else if (nearestChest != null) {
                     chestController.moveToNearChestAndBreak(nodesToAvoid);
                 }
 
             }
 
+
             // 3. So sánh khoảng cách để quyết định hành động
-            if (nearestChest != null && 1.5*PathUtils.distance(player, nearestChest) < PathUtils.distance(player, nearestPlayer)) {
+            if (nearestChest != null && nearestPlayer != null) {
+                if (2.5 * PathUtils.distance(player, nearestChest) < PathUtils.distance(player, nearestPlayer)) {
+                    chestController.moveToNearChestAndBreak(nodesToAvoid);
+                } else {
+                    combatController.engageNearestEnemy(nodesToAvoid);
+                }
+            } else if (nearestPlayer == null && nearestChest != null) {
                 chestController.moveToNearChestAndBreak(nodesToAvoid);
-            } else if (nearestPlayer != null){
+            } else if (nearestPlayer != null) {
                 combatController.engageNearestEnemy(nodesToAvoid);
+            } else {
+                itemController.handleSearchAroundItems(20, nodesToAvoid);
             }
 
-            //LOGIC HIỆN TẠI ,
-//            handleRecover(player, 70);
-//            if (itemController.handleSearchAroundItems(2, nodesToAvoid)) return;
-//            if (nearestChest == null){
-//                combatController.engageNearestEnemy(nodesToAvoid);
-//            }else if (PathUtils.distance(player, nearestChest) < PathUtils.distance(player, nearestPlayer)){
-//                chestController.moveToNearChestAndBreak(nodesToAvoid);
-//            }else{
-//                combatController.engageNearestEnemy(nodesToAvoid);
-//            }
-            //
+
         } catch (Exception e) {
             System.err.println("Critical error in call method: " + e.getMessage());
             e.printStackTrace();
@@ -113,34 +115,37 @@ class MapUpdateListener implements Emitter.Listener {
     }
 
 
-
     public void handleRecover(Player player, float minimum) throws IOException {
         System.out.println("🎒 Current HP: " + player.getHealth());
-        if (player.getHealth() < minimum){
+        if (player.getHealth() < minimum) {
             List<SupportItem> supportItems = hero.getInventory().getListSupportItem();
-            if (supportItems != null && !supportItems.isEmpty()){
+            if (supportItems != null && !supportItems.isEmpty()) {
                 hero.useItem(supportItems.getFirst().getId());
-                System.out.println("🎒 Using SupportItem: " + supportItems.getFirst().getId() + " and heal " + supportItems.getFirst().getHealingHP() + "HP!!");
+                System.out.println("🎒 Using SupportItem: " + supportItems.getFirst().getId() + " and heal "
+                        + supportItems.getFirst().getHealingHP() + "HP!!");
             }
         }
     }
 
-    private List<Node> getNodesToAvoid() throws  IOException{
+    private List<Node> getNodesToAvoid() throws IOException {
         GameMap gameMap = hero.getGameMap();
-        List<Node> nodes = new ArrayList<>(gameMap.getListIndestructibles());
-        nodes.removeAll(gameMap.getObstaclesByTag("CAN_GO_THROUGH"));
-        nodes.addAll(gameMap.getObstaclesByTag(String.valueOf(ObstacleTag.TRAP)));
-        nodes.addAll(gameMap.getListEnemies());
-        nodes.addAll(gameMap.getOtherPlayerInfo());
+        List<Node> nodes = new ArrayList<>();
+        nodes.addAll(gameMap.getObstaclesByTag("PULLABLE_ROPE"));
+        nodes.addAll(gameMap.getObstaclesByTag("TRAP"));
         return nodes;
     }
 
-    public void moveToSafeZone() throws IOException {
-        Player player = hero.getGameMap().getCurrentPlayer();
-        int x = player.getX(), y = player.getY();
-        if (x < 0) hero.move("r");
-        else hero.move("l");
-        if (y < 0) hero.move("u");
-        else hero.move("d");
+    public void moveToSafeZone(List<Node> nodesToAvoid) throws IOException {
+        String pathToCenter = getPathToCenter(nodesToAvoid);
+        hero.move(String.valueOf(pathToCenter.charAt(0)));
     }
+
+    public String getPathToCenter(List<Node> nodesToAvoid){
+        GameMap gameMap = hero.getGameMap();
+        Player player = gameMap.getCurrentPlayer();
+        int mapSize = gameMap.getMapSize();
+        Node center = new Node(mapSize/2, mapSize/2);
+        return PathUtils.getShortestPath(gameMap, nodesToAvoid, player, center, false);
+    }
+
 }

@@ -32,7 +32,7 @@ public class InventoryService {
         List<SupportItem> supportItems = inventory.getListSupportItem();
         if (supportItems.size() < MAX_SupportItem) return null;
 
-        SupportItem worst = supportItems.get(0);
+        SupportItem worst = supportItems.getFirst();
 
         for (SupportItem supportItem : supportItems) {
             if (!ItemStatComparator.isBetterSupportItem(supportItem, worst)) {
@@ -42,6 +42,13 @@ public class InventoryService {
         return worst;
     }
 
+    public boolean isOnlyShotgunAndThrow(){
+        if (inventory.getGun().getId().equals("SHOTGUN") && inventory.getMelee().getId().equals("HAND")){
+            System.out.println("Only shotgun and throw");
+            return true;
+        }
+        return false;
+    }
 //    public SupportItem getTheMostAppropriateSupportItem(float maxHP, float currentHP){
 //        List<SupportItem> supportItems = inventory.getListSupportItem();
 //        if (supportItems == null) return null;

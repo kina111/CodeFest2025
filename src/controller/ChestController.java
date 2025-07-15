@@ -29,9 +29,9 @@ public class ChestController {
                 System.out.println("Found chest!! Move to chest");
             } else if (pathToChest.length() == 1) {
                 hero.attack(String.valueOf(pathToChest.charAt(0)));
-                System.out.println("Found chest!! Attacking chest.");
+                System.out.println("Attacking chest.");
             }
-            return true;
+            return  true;
         }
         return false;
     }
@@ -42,8 +42,7 @@ public class ChestController {
         Player player = hero.getGameMap().getCurrentPlayer();
 
         Obstacle nearestChest = getNearestChest();
-        if (nearestChest == null) return null;
-        return PathUtils.getShortestPath(gameMap, nodesToAvoid, player, nearestChest, true);
+        return nearestChest == null ? null : PathUtils.getShortestPath(gameMap, nodesToAvoid, player, nearestChest, true);
     }
 
     //get the nearest chest within safe-zone
@@ -54,6 +53,7 @@ public class ChestController {
         List<Obstacle> chests = gameMap.getObstaclesByTag(String.valueOf(ObstacleTag.DESTRUCTIBLE));
         Obstacle nearestChest = null;
         double minDistance = Double.MAX_VALUE;
+
 
         for (Obstacle chest : chests) {
             if (!PathUtils.checkInsideSafeArea(chest, gameMap.getSafeZone(), gameMap.getMapSize())) continue;

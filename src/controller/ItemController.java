@@ -13,6 +13,8 @@ import service.InventoryService;
 import util.ItemStatComparator;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class ItemController {
@@ -48,12 +50,12 @@ public class ItemController {
             else if (currentElement.getType() == ElementType.SPECIAL) {
                 Weapon currentSpecial = (Weapon) currentElement;
                 hero.revokeItem(currentSpecial.getId());
-                System.out.println("🎒 Using SpecialItem: " + currentElement.getId());
+                System.out.println("🎒 Revoking SpecialItem: " + currentElement.getId());
             }
             else if (currentElement.getType() == ElementType.THROWABLE){
                 Weapon currentWeapon = (Weapon) currentElement;
-                hero.throwItem("l");
-                System.out.println("🎒 Using ThrowableItem: " + currentElement.getId());
+                hero.revokeItem(currentWeapon.getId());
+                System.out.println("🎒 Revoking ThrowableItem: " + currentElement.getId());
             }
             else {
                 hero.revokeItem(currentElement.getId());
@@ -62,7 +64,7 @@ public class ItemController {
             //nếu đang đứng tại vị trí item
         } else if (pathToItem.isEmpty()) {
             hero.pickupItem();
-            System.out.println("🎒 Looting " + item.getType() + "---" + item.getId());
+            System.out.println("🎒 Looting " + item.getType() + " --- " + item.getId());
             //nếu chưa đến nơi
         } else {
             hero.move(pathToItem.substring(0, Math.min(3, pathToItem.length())));
@@ -77,28 +79,37 @@ public class ItemController {
         int py = player.getY();
         int mapSize = gameMap.getMapSize();
 
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -radius; dy <= radius; dy++) {
+        List<Node> nearbyNodes = new ArrayList<>();
+
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
                 int nx = px + dx;
                 int ny = py + dy;
 
                 if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
+                //if (dx == 0 && dy == 0) continue; // bỏ qua ô hiện tại
 
-                Element foundItem = gameMap.getElementByIndex(nx, ny);
-                if (foundItem == null) continue;
+                nearbyNodes.add(new Node(nx, ny));
+            }
+        }
 
-                //get current element in Inventory by type: Weapon, Armor, SupportItem
-                ElementType type = foundItem.getType();
-                if (isPickable(type)) {
-                    Element currentItem = inventoryService.getElementByType(type);
-                    if (ItemStatComparator.isBetterItem(foundItem, currentItem)) {
-                        return foundItem;
-                    }
+        // Sắp xếp theo khoảng cách đến người chơi
+        nearbyNodes.sort(Comparator.comparingDouble(a -> PathUtils.distance(player, a)));
+
+        for (Node node : nearbyNodes) {
+            Element foundItem = gameMap.getElementByIndex(node.getX(), node.getY());
+            if (foundItem == null) continue;
+
+            ElementType type = foundItem.getType();
+            if (isPickable(type)) {
+                Element currentItem = inventoryService.getElementByType(type);
+                if (ItemStatComparator.isBetterItem(foundItem, currentItem)) {
+                    return foundItem;
                 }
             }
         }
 
-        return null; // không tìm thấy item tốt hơn
+        return null;
     }
 
     private boolean isPickable(ElementType type) {
@@ -111,7 +122,7 @@ public class ItemController {
                 type == ElementType.SUPPORT_ITEM;
     }
 
-    public void handleSearchForGun(List<Node> nodesToAvoid) throws IOException {
+    public boolean handleSearchForGun(List<Node> nodesToAvoid) throws IOException {
         System.out.println("No gun found. Searching for a gun.");
         GameMap gameMap = hero.getGameMap();
         String pathToGun = findPathToGun(nodesToAvoid);
@@ -122,27 +133,30 @@ public class ItemController {
             } else {
                 hero.move(pathToGun);
             }
+            return true;
         }
+        return false;
     }
 
     public String findPathToGun(List<Node> nodesToAvoid) {
         GameMap gameMap = hero.getGameMap();
         Player player = gameMap.getCurrentPlayer();
         Weapon nearestGun = getNearestGun();
-        if (nearestGun == null) return null;
-        return PathUtils.getShortestPath(gameMap, nodesToAvoid, player, nearestGun, true);
+        return nearestGun == null ? null : PathUtils.getShortestPath(gameMap, nodesToAvoid, player, nearestGun, true);
     }
 
     public Weapon getNearestGun() {
         GameMap gameMap = hero.getGameMap();
         Player player = gameMap.getCurrentPlayer();
         List<Weapon> guns = gameMap.getAllGun();
+
         Weapon nearestGun = null;
         double minDistance = Double.MAX_VALUE;
 
         for (Weapon gun : guns) {
+            if (!PathUtils.checkInsideSafeArea(gun, gameMap.getSafeZone(), gameMap.getMapSize())) continue;
             double distance = PathUtils.distance(player, gun);
-            if (distance < minDistance) {
+            if (distance < minDistance || (!nearestGun.getId().equals("SHOTGUN") && gun.getId().equals("SHOTGUN") && distance < 2 * minDistance)) {
                 minDistance = distance;
                 nearestGun = gun;
             }

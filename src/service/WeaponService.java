@@ -1,5 +1,6 @@
 package service;
 
+import jsclub.codefest.sdk.model.ElementType;
 import jsclub.codefest.sdk.model.weapon.Weapon;
 
 import java.util.HashMap;
@@ -7,8 +8,7 @@ import java.util.Map;
 
 public class WeaponService {
     private static final WeaponService instance = new WeaponService();
-    private final Map<String, Long> cooldownMap = new HashMap<>();
-    private static final float DELAYDISAPPEAR = 0.5F;
+    private final Map<String, Float> cooldownMap = new HashMap<>();
 
     private WeaponService() {}
 
@@ -16,18 +16,19 @@ public class WeaponService {
         return instance;
     }
 
-    public boolean canUse(Weapon weapon, long currentStep) {
+    public boolean canUse(Weapon weapon, float currentStep) {
         String id = weapon.getId();
+        if (weapon.getType() == ElementType.THROWABLE) return true;
         return !cooldownMap.containsKey(id)
-                || currentStep - cooldownMap.get(id) >= getCooldown(weapon) + DELAYDISAPPEAR;
+                || currentStep - cooldownMap.get(id) >= getCooldown(weapon);
     }
 
-    public void markUsed(String weapon, long currentStep) {
+    public void markUsed(String weapon, float currentStep) {
         cooldownMap.put(weapon, currentStep);
     }
 
-    private long getCooldown(Weapon weapon) {
+    private float getCooldown(Weapon weapon) {
         // ví dụ: mỗi vũ khí 5 step
-        return (long) weapon.getCooldown();
+        return (float) weapon.getCooldown();
     }
 }
